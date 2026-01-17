@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, Square, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface AudioDevice {
+  deviceId: string;
+  label: string;
+}
 
 interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob, duration: string) => void;
@@ -12,6 +24,8 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(32).fill(0));
+  const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -19,6 +33,33 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
   const animationRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadAudioDevices = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices
+        .filter((device) => device.kind === "audioinput")
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Microphone ${index + 1}`,
+        }));
+      setAudioDevices(audioInputs);
+      if (audioInputs.length > 0 && !selectedDeviceId) {
+        setSelectedDeviceId(audioInputs[0].deviceId);
+      }
+    } catch (err) {
+      console.error("Error loading audio devices:", err);
+    }
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    loadAudioDevices();
+    navigator.mediaDevices.addEventListener("devicechange", loadAudioDevices);
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", loadAudioDevices);
+    };
+  }, [loadAudioDevices]);
 
   const updateAudioLevels = useCallback(() => {
     if (!analyserRef.current) return;
@@ -39,7 +80,10 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const constraints: MediaStreamConstraints = {
+        audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
       const audioContext = new AudioContext();
@@ -184,6 +228,35 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
           {isRecording && (
             <div className="text-2xl font-mono font-semibold text-primary" data-testid="text-recording-duration">
               {formatTime(duration)}
+            </div>
+          )}
+
+          {audioDevices.length > 1 && (
+            <div className="w-full max-w-xs">
+              <Select
+                value={selectedDeviceId}
+                onValueChange={setSelectedDeviceId}
+                disabled={isRecording || isProcessing}
+              >
+                <SelectTrigger 
+                  className="w-full text-sm"
+                  data-testid="select-audio-device"
+                >
+                  <Mic className="h-4 w-4 mr-2 shrink-0" />
+                  <SelectValue placeholder="Select microphone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {audioDevices.map((device) => (
+                    <SelectItem 
+                      key={device.deviceId} 
+                      value={device.deviceId}
+                      data-testid={`option-device-${device.deviceId}`}
+                    >
+                      {device.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
