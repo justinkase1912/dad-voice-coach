@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Music, Play, Square, RotateCcw, CheckCircle2, ArrowDown, ArrowUp } from "lucide-react";
+import { Music, Play, Square, RotateCcw, CheckCircle2, ArrowDown, ArrowUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { PianoKeyboard } from "./piano-keyboard";
 import { 
   PitchDetector, 
   type PitchResult, 
@@ -14,7 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { VocalRangeRecord } from "@shared/schema";
 
-type TestPhase = "idle" | "low" | "high" | "complete";
+type TestPhase = "idle" | "intro-low" | "low" | "intro-high" | "high" | "complete";
 
 interface DetectedNote {
   note: string;
@@ -22,6 +23,31 @@ interface DetectedNote {
   frequency: number;
   count: number;
 }
+
+const INSTRUCTIONS = {
+  introLow: {
+    title: "Finding Your Lowest Note",
+    steps: [
+      "Stand or sit up straight with relaxed shoulders",
+      "Take a deep breath from your belly, not your chest", 
+      "Start with a comfortable low note on 'Ahh'",
+      "Slowly slide your voice lower, like a gentle siren going down",
+      "Stop when your voice becomes breathy or cracks - that's your limit"
+    ],
+    tip: "Don't push or strain. Your lowest usable note should still sound clear."
+  },
+  introHigh: {
+    title: "Finding Your Highest Note", 
+    steps: [
+      "Shake out any tension in your neck and jaw",
+      "Take another deep belly breath",
+      "Start at a comfortable pitch on 'Ee' or 'Ahh'",
+      "Gradually slide your voice higher, like a siren going up",
+      "Stop when your voice flips to falsetto or strains"
+    ],
+    tip: "Keep your throat open and relaxed. If it hurts, you've gone too far."
+  }
+};
 
 export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string }) {
   const [phase, setPhase] = useState<TestPhase>("idle");
@@ -63,8 +89,6 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
     setCurrentPitch(result);
     
     if (result && result.confidence > 0.1) {
-      const noteStr = noteToString(result.note, result.octave);
-      
       setDetectedNotes(prev => {
         const existing = prev.find(n => n.note === result.note && n.octave === result.octave);
         if (existing) {
@@ -97,13 +121,13 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
       await pitchDetector.start(selectedDeviceId, handlePitch);
     } catch (err) {
       console.error("Failed to start pitch detection:", err);
-      setError("Could not access microphone. Please check permissions.");
+      setError("Could not access microphone. Please check permissions and try again.");
       setPhase("idle");
       setDetector(null);
       return;
     }
     
-    const duration = 10000;
+    const duration = 12000;
     const interval = 100;
     let elapsed = 0;
     
@@ -195,14 +219,26 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
     };
   }, [detector, intervalId]);
 
-  const renderCurrentNote = () => {
-    if (!currentPitch) {
-      return <span className="text-muted-foreground">Listening...</span>;
-    }
+  const renderInstructions = (type: "introLow" | "introHigh") => {
+    const instructions = INSTRUCTIONS[type];
     return (
-      <span className="text-4xl font-bold text-primary">
-        {noteToString(currentPitch.note, currentPitch.octave)}
-      </span>
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg text-center">{instructions.title}</h3>
+        <ol className="space-y-2 text-sm">
+          {instructions.steps.map((step, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center font-medium">
+                {i + 1}
+              </span>
+              <span className="text-muted-foreground">{step}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/10 text-sm">
+          <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+          <span className="text-muted-foreground">{instructions.tip}</span>
+        </div>
+      </div>
     );
   };
 
@@ -216,6 +252,12 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <PianoKeyboard
+            lowestNote={savedRange.lowestNote}
+            highestNote={savedRange.highestNote}
+            showLabels={true}
+          />
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <div className="text-xs text-muted-foreground mb-1">Lowest</div>
@@ -265,21 +307,24 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Music className="h-5 w-5 text-primary" />
-          Find Your Range
+          {phase === "idle" && !lowestNote ? "Find Your Range" : 
+           phase === "intro-low" ? "Get Ready" :
+           phase === "intro-high" ? "Get Ready" :
+           "Range Test"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {phase === "idle" && !lowestNote && !highestNote && (
           <>
             <p className="text-sm text-muted-foreground text-center">
-              Discover your natural vocal range and find the best keys for your voice.
+              Discover your natural vocal range to find the best keys for your voice. This takes about 2 minutes.
             </p>
             {error && (
               <p className="text-sm text-destructive text-center">{error}</p>
             )}
             <Button 
               className="w-full" 
-              onClick={() => startPhase("low")}
+              onClick={() => setPhase("intro-low")}
               data-testid="button-start-range-test"
             >
               <Play className="h-4 w-4 mr-2" />
@@ -288,11 +333,39 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
           </>
         )}
 
+        {phase === "intro-low" && (
+          <>
+            {renderInstructions("introLow")}
+            <Button 
+              className="w-full" 
+              onClick={() => startPhase("low")}
+              data-testid="button-begin-low-test"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              I'm Ready - Start Recording
+            </Button>
+          </>
+        )}
+
+        {phase === "intro-high" && (
+          <>
+            {renderInstructions("introHigh")}
+            <Button 
+              className="w-full" 
+              onClick={() => startPhase("high")}
+              data-testid="button-begin-high-test"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              I'm Ready - Start Recording
+            </Button>
+          </>
+        )}
+
         {phase === "idle" && lowestNote && !highestNote && (
           <>
             <div className="text-center p-4 rounded-lg bg-muted/50">
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
-                <ArrowDown className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
                 Lowest Note Found
               </div>
               <div className="text-3xl font-bold text-primary">
@@ -300,39 +373,44 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
               </div>
             </div>
             <p className="text-sm text-muted-foreground text-center">
-              Now let's find your highest comfortable note.
+              Great! Now let's find your highest comfortable note.
             </p>
             <Button 
               className="w-full" 
-              onClick={() => startPhase("high")}
+              onClick={() => setPhase("intro-high")}
               data-testid="button-test-high"
             >
               <ArrowUp className="h-4 w-4 mr-2" />
-              Test High Range
+              Continue to High Range
             </Button>
           </>
         )}
 
         {(phase === "low" || phase === "high") && (
           <>
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-1">
               <p className="text-sm font-medium">
                 {phase === "low" 
-                  ? "Sing your lowest comfortable note" 
-                  : "Sing your highest comfortable note"}
+                  ? "Sing from comfortable to your LOWEST note" 
+                  : "Sing from comfortable to your HIGHEST note"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {phase === "low"
-                  ? "Start low and gradually go lower"
-                  : "Start comfortable and reach higher"}
+                  ? "Slide down slowly like a gentle siren"
+                  : "Slide up slowly, stop before straining"}
               </p>
             </div>
             
-            <div className="h-24 flex items-center justify-center">
-              {renderCurrentNote()}
-            </div>
+            <PianoKeyboard
+              currentNote={currentPitch?.note}
+              currentOctave={currentPitch?.octave}
+              cents={currentPitch?.cents}
+            />
             
             <Progress value={progress} className="h-2" />
+            <p className="text-xs text-muted-foreground text-center">
+              {Math.max(0, Math.ceil(12 - (progress / 100) * 12))} seconds remaining
+            </p>
             
             <Button 
               variant="destructive" 
@@ -352,6 +430,12 @@ export function RangeFinder({ selectedDeviceId }: { selectedDeviceId?: string })
               <CheckCircle2 className="h-5 w-5" />
               <span className="font-medium">Range Test Complete!</span>
             </div>
+
+            <PianoKeyboard
+              lowestNote={noteToString(lowestNote.note, lowestNote.octave)}
+              highestNote={noteToString(highestNote.note, highestNote.octave)}
+              showLabels={true}
+            />
             
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 rounded-lg bg-muted/50">

@@ -5,6 +5,7 @@ import { FeedbackDisplay } from "@/components/feedback-display";
 import { CoachingExercises } from "@/components/coaching-exercises";
 import { RecordingHistory } from "@/components/recording-history";
 import { RangeFinder } from "@/components/range-finder";
+import { VocalExercises } from "@/components/vocal-exercises";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -123,13 +124,17 @@ export default function Home() {
               onDeviceChange={setSelectedDeviceId}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FeedbackDisplay 
-                analysis={currentAnalysis} 
-                feedback={currentFeedback} 
-              />
-              <CoachingExercises feedback={currentFeedback} />
-            </div>
+            <VocalExercises selectedDeviceId={selectedDeviceId} />
+
+            {(currentAnalysis || currentFeedback) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FeedbackDisplay 
+                  analysis={currentAnalysis} 
+                  feedback={currentFeedback} 
+                />
+                <CoachingExercises feedback={currentFeedback} />
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-1 space-y-6">
