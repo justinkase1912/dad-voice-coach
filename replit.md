@@ -2,7 +2,12 @@
 
 ## Overview
 
-DadVoice Coach is an AI-powered voice coaching web application that analyzes recorded singing voice samples and provides personalized feedback. Users can record audio directly in the browser, receive analysis of pitch accuracy, tone stability, breath support, and strain risk, along with actionable coaching exercises to improve their vocal technique.
+DadVoice Coach is an AI-powered voice coaching web application that teaches users to sing better through interactive exercises and AI-powered analysis. The app includes:
+
+- **Vocal Exercises**: Guided training with breath control, warm-ups, and pitch matching practice
+- **Real-Time Pitch Detection**: Visual piano keyboard showing exactly where your voice lands
+- **Vocal Range Finder**: Discover your natural range, voice type, and best singing keys
+- **AI Voice Analysis**: Record singing samples and receive personalized coaching feedback on pitch accuracy, tone stability, breath support, and strain risk
 
 ## User Preferences
 
@@ -38,6 +43,14 @@ Preferred communication style: Simple, everyday language.
 - **Recordings**: Store audio analysis results including pitch accuracy, tone stability, breath support, strain risk scores, and coaching feedback with exercises
 - **Voice Analysis**: Structured scoring (0-100) for multiple vocal metrics
 - **Coaching Feedback**: Contains summary, strengths, improvements, exercises with durations, and encouragement
+- **VocalRange**: Stores lowest/highest notes, voice type classification, and suggested singing keys
+
+### Training Features
+- **Pitch Detection**: Real-time autocorrelation algorithm for accurate pitch identification
+- **Piano Keyboard**: Visual feedback showing current pitch with sharp/flat indicators (green = on pitch, orange = sharp, blue = flat)
+- **Breathing Exercise**: 4-cycle guided breathing (inhale/hold/exhale) for breath support
+- **Warm-up Exercises**: Lip trills, humming, and siren slides with step-by-step instructions
+- **Pitch Matching**: Progressive exercise matching target notes with real-time visual feedback
 
 ### Audio Pipeline
 1. Browser captures audio via MediaRecorder API (WebM/Opus format)
