@@ -4,6 +4,7 @@ import { VoiceRecorder } from "@/components/voice-recorder";
 import { FeedbackDisplay } from "@/components/feedback-display";
 import { CoachingExercises } from "@/components/coaching-exercises";
 import { RecordingHistory } from "@/components/recording-history";
+import { RangeFinder } from "@/components/range-finder";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -15,6 +16,7 @@ export default function Home() {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [currentAnalysis, setCurrentAnalysis] = useState<VoiceAnalysis | null>(null);
   const [currentFeedback, setCurrentFeedback] = useState<CoachingFeedback | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
 
   const { data: recordings = [], isLoading: isLoadingRecordings } = useQuery<Recording[]>({
     queryKey: ["/api/recordings"],
@@ -35,7 +37,7 @@ export default function Home() {
         audio: base64Audio,
         duration,
       });
-      return response as Recording;
+      return await response.json() as Recording;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/recordings"] });
@@ -118,6 +120,7 @@ export default function Home() {
             <VoiceRecorder 
               onRecordingComplete={handleRecordingComplete}
               isProcessing={analyzeMutation.isPending}
+              onDeviceChange={setSelectedDeviceId}
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -129,7 +132,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            <RangeFinder selectedDeviceId={selectedDeviceId} />
             <RecordingHistory
               recordings={recordings}
               onSelect={handleSelectRecording}

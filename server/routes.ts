@@ -312,6 +312,51 @@ export async function registerRoutes(
     });
   });
 
+  app.get("/api/vocal-range", async (req, res) => {
+    try {
+      const range = await storage.getVocalRange();
+      res.json(range || null);
+    } catch (error) {
+      console.error("Error fetching vocal range:", error);
+      res.status(500).json({ error: "Failed to fetch vocal range" });
+    }
+  });
+
+  app.post("/api/vocal-range", async (req, res) => {
+    try {
+      const { 
+        lowestNote, 
+        highestNote, 
+        lowestFrequency, 
+        highestFrequency,
+        comfortableLow,
+        comfortableHigh,
+        voiceType,
+        suggestedKeys 
+      } = req.body;
+
+      if (!lowestNote || !highestNote) {
+        return res.status(400).json({ error: "Range data is incomplete" });
+      }
+
+      const range = await storage.saveVocalRange({
+        lowestNote,
+        highestNote,
+        lowestFrequency: String(lowestFrequency),
+        highestFrequency: String(highestFrequency),
+        comfortableLow,
+        comfortableHigh,
+        voiceType,
+        suggestedKeys,
+      });
+
+      res.json(range);
+    } catch (error) {
+      console.error("Error saving vocal range:", error);
+      res.status(500).json({ error: "Failed to save vocal range" });
+    }
+  });
+
   return httpServer;
 }
 

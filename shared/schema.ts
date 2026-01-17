@@ -58,3 +58,37 @@ export const insertRecordingSchema = createInsertSchema(recordings).omit({
 
 export type Recording = typeof recordings.$inferSelect;
 export type InsertRecording = z.infer<typeof insertRecordingSchema>;
+
+export const vocalRangeSchema = z.object({
+  lowestNote: z.string(),
+  highestNote: z.string(),
+  lowestFrequency: z.number(),
+  highestFrequency: z.number(),
+  comfortableLow: z.string(),
+  comfortableHigh: z.string(),
+  voiceType: z.string(),
+  suggestedKeys: z.array(z.string()),
+});
+
+export type VocalRange = z.infer<typeof vocalRangeSchema>;
+
+export const vocalRanges = pgTable("vocal_ranges", {
+  id: serial("id").primaryKey(),
+  lowestNote: text("lowest_note").notNull(),
+  highestNote: text("highest_note").notNull(),
+  lowestFrequency: text("lowest_frequency").notNull(),
+  highestFrequency: text("highest_frequency").notNull(),
+  comfortableLow: text("comfortable_low").notNull(),
+  comfortableHigh: text("comfortable_high").notNull(),
+  voiceType: text("voice_type").notNull(),
+  suggestedKeys: jsonb("suggested_keys").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const insertVocalRangeSchema = createInsertSchema(vocalRanges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type VocalRangeRecord = typeof vocalRanges.$inferSelect;
+export type InsertVocalRange = z.infer<typeof insertVocalRangeSchema>;

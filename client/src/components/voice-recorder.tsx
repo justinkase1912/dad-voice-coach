@@ -18,9 +18,10 @@ interface AudioDevice {
 interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob, duration: string) => void;
   isProcessing: boolean;
+  onDeviceChange?: (deviceId: string) => void;
 }
 
-export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecorderProps) {
+export function VoiceRecorder({ onRecordingComplete, isProcessing, onDeviceChange }: VoiceRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(32).fill(0));
@@ -46,12 +47,14 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
         }));
       setAudioDevices(audioInputs);
       if (audioInputs.length > 0 && !selectedDeviceId) {
-        setSelectedDeviceId(audioInputs[0].deviceId);
+        const defaultDevice = audioInputs[0].deviceId;
+        setSelectedDeviceId(defaultDevice);
+        onDeviceChange?.(defaultDevice);
       }
     } catch (err) {
       console.error("Error loading audio devices:", err);
     }
-  }, [selectedDeviceId]);
+  }, [selectedDeviceId, onDeviceChange]);
 
   useEffect(() => {
     loadAudioDevices();
@@ -235,7 +238,10 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
             <div className="w-full max-w-xs">
               <Select
                 value={selectedDeviceId}
-                onValueChange={setSelectedDeviceId}
+                onValueChange={(value) => {
+                  setSelectedDeviceId(value);
+                  onDeviceChange?.(value);
+                }}
                 disabled={isRecording || isProcessing}
               >
                 <SelectTrigger 
@@ -257,6 +263,18 @@ export function VoiceRecorder({ onRecordingComplete, isProcessing }: VoiceRecord
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {audioDevices.length === 1 && (
+            <div className="text-center text-xs text-muted-foreground">
+              <span>Using: {audioDevices[0]?.label || "Default Microphone"}</span>
+            </div>
+          )}
+
+          {audioDevices.length === 0 && !isRecording && !isProcessing && (
+            <div className="text-center text-xs text-destructive">
+              No microphone detected. Please connect a microphone.
             </div>
           )}
 
